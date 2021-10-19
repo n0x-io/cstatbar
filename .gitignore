@@ -1,5 +1,10 @@
 # program itself
 cstatbar
+config.h
+
+# patch file output
+*.rej
+*.orig
 
 # ---> C
 # Prerequisites
