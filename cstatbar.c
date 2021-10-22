@@ -19,33 +19,86 @@
 #include "config.h"
 
 /* enums */ 
-enum { IconDateTime, IconBattery, IconCPU, IconRAM, IconDisk,
-       IconNetSpeed, IconNetSpeedUp, IconNetSpeedDown, IconNetwork, IconMusic };
+enum Icon { IconDateTime, IconBattery, IconCPU, IconRAM, IconDisk,
+    IconNetSpeed, IconNetSpeedUp, IconNetSpeedDown, IconNetwork, IconMusic };
 
 /* function declaration */
+char *cs(int count, ...);
+char *getnetworkspeed();
+char *makestatitem(enum Icon icon, char *val);
+char *readinfile(char *filename);
 void setup();
 void setxroot(char *title);
-char *readinfile(char *filename);
-char *getnetworkspeed();
-char *cs(int count, ...);
 
 /* variables */
 static const char *iface;
 static const char kbs[] = "kb/s";
+static unsigned int ic;
+static const char *icb;
+static const char *icf;
 
 
-/* Uses functionality from Xlib to set the window root name to a specified string */
-void setxroot(char *title)
+/* a variadic function to take in count number of strings and concatenate them into one single string */
+char * cs(int count, ...)
 {
-    Display * dpy = XOpenDisplay(NULL);
+    va_list ap;
+    va_start(ap, count);
+    
+    int len = 1;
+    for(int i=0; i<count; i++) { len += strlen(va_arg(ap, char*)); }
+    va_end(ap);
 
-    int screen = DefaultScreen(dpy);
-    Window root = RootWindow(dpy, screen);
+    char * result = malloc(len * sizeof(char));
+    int pos = 0;
 
-    XStoreName(dpy, root, title); 
-    XFlush(dpy);
+    va_start(ap, count);
+    for(int i=0; i<count; i++){
+        char * tmp = va_arg(ap, char *);
+        strcpy(result + pos, tmp);
+        pos += strlen(tmp);
+    }
+    return result;
+}
 
-    XCloseDisplay(dpy);
+
+/* get the rx and tx network speed from /sys/ */
+char * getnetworkspeed()
+{
+    char *tmp,*R1,*R2,*T1,*T2;
+    char TT[12], RR[12];
+    
+    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
+    R1 = readinfile(tmp);
+    free(tmp);
+    
+    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
+    T1 = readinfile(tmp);
+    free(tmp);
+    
+    sleep(1);
+
+    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
+    R2 = readinfile(tmp);
+    free(tmp);
+    
+    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
+    T2 = readinfile(tmp);
+    free(tmp);
+
+    sprintf(RR, "%d", (atoi(R2) - atoi(R1)) / 1024);
+    sprintf(TT, "%d", (atoi(T2) - atoi(T1)) / 1024);
+
+    return cs(9, 
+            icons[IconNetSpeedUp], " ", TT, kbs, " ", 
+            icons[IconNetSpeedDown], " ", RR, kbs);
+}
+
+
+/* creates a formatet string for a status item. Adds color if enabled */
+char * makestatitem(enum Icon icon, char *val){
+    return cs(4, " ", 
+            ic ? cs(7 ,"^b", icb, "^^c", icf, "^ ", icons[icon], " ^d^") : icons[icon],
+            "  ", val);
 }
 
 
@@ -73,65 +126,27 @@ char * readinfile(char *fileName)
 }
 
 
-char * getnetworkspeed()
-{
-    char *tmp,*result,*R1,*R2,*T1,*T2;
-    char TT[12], RR[12];
-    
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
-    R1 = readinfile(tmp);
-    free(tmp);
-    
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
-    T1 = readinfile(tmp);
-    free(tmp);
-    
-    sleep(1);
-
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
-    R2 = readinfile(tmp);
-    free(tmp);
-    
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
-    T2 = readinfile(tmp);
-    free(tmp);
-
-    sprintf(RR, "%d", (atoi(R2) - atoi(R1)) / 1024);
-    sprintf(TT, "%d", (atoi(T2) - atoi(T1)) / 1024);
-
-    result = cs(11, icons[IconNetSpeed], " ", 
-            icons[IconNetSpeedUp], " ", TT, kbs, " ", 
-            icons[IconNetSpeedDown], " ", RR, kbs);
-
-    return result;
-}
-
-
-/* a variadic function to take in count number of strings and concatenate them into one single string */
-char * cs(int count, ...)
-{
-    va_list ap;
-    va_start(ap, count);
-    
-    int len = 1;
-    for(int i=0; i<count; i++) { len += strlen(va_arg(ap, char*)); }
-    va_end(ap);
-
-    char * result = malloc(len * sizeof(char));
-    int pos = 0;
-
-    va_start(ap, count);
-    for(int i=0; i<count; i++){
-        char * tmp = va_arg(ap, char *);
-        strcpy(result + pos, tmp);
-        pos += strlen(tmp);
-    }
-    return result;
-}
-
-
+/* basic setup method for internal variable etc */
 void setup(){
     iface = interface;
+    ic = icon_color;
+    icb = icon_colorbg;
+    icf = icon_colorfg;
+}
+
+
+/* Uses functionality from Xlib to set the window root name to a specified string */
+void setxroot(char *title)
+{
+    Display * dpy = XOpenDisplay(NULL);
+
+    int screen = DefaultScreen(dpy);
+    Window root = RootWindow(dpy, screen);
+
+    XStoreName(dpy, root, title); 
+    XFlush(dpy);
+
+    XCloseDisplay(dpy);
 }
 
 
@@ -140,8 +155,9 @@ int main(int argc, char *argv[])
     setup();
 
     while(1) {
-        //setxroot(name); 
-        printf("%s\n", getnetworkspeed());
+        char * ns = makestatitem(IconNetSpeed, getnetworkspeed());
+
+        setxroot(ns);
 
         sleep(cycletime);
     }
