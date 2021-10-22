@@ -3,7 +3,7 @@
 SRC = cstatbar.c
 OBJ = ${SRC:.c=.o}
 CC = cc
-CFLAGS = -std=c99 -g
+CFLAGS = -std=gnu99 -g
 LDFLAGS = -lX11
 
 

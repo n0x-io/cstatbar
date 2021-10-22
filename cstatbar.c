@@ -16,11 +16,18 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
 #include "config.h"
 
 /* enums */ 
-enum Icon { IconDateTime, IconBattery, IconCPU, IconRAM, IconDisk,
-    IconNetSpeed, IconNetSpeedUp, IconNetSpeedDown, IconNetwork, IconMusic };
+enum Icon { ICON_DATETIME, ICON_BATTERY, ICON_CPU, ICON_RAM, ICON_DISK,
+    ICON_NETSPEED, ICON_NETSPEED_UP, ICON_NETSPEED_DOWN, ICON_NETWORK, ICON_MUSIC };
 
 /* function declaration */
 char *concat_string (int count, ...);
@@ -62,12 +69,26 @@ char
     return result;
 }
 
-
-/* Read in the IP from /proc/net/fib_trie for g_if */
+// @TODO
+/* Read in the IP and display it 
+ * maybe from /proc/net/fib_trie ?*/
 char 
 *get_networkinfo ()
 {
-    return NULL;
+    int fd;
+    struct ifreq ifr;
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    ifr.ifr_addr.sa_family = AF_INET;
+    
+    strncpy(ifr.ifr_name, g_if, IFNAMSIZ-1);
+
+    ioctl(fd, SIOCGIFADDR, &ifr);
+
+    close(fd);
+
+    return concat_string(4, interface, " [", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr), "]");
 }
 
 
@@ -105,8 +126,8 @@ char
     sprintf(tt, "%d", (atoi(t2) - atoi(t1)) / 1024);
 
     return concat_string(9, 
-            icons[IconNetSpeedUp], " ", tt, KBS, " ", 
-            icons[IconNetSpeedDown], " ", rr, KBS);
+            icons[ICON_NETSPEED_UP], " ", tt, KBS, " ", 
+            icons[ICON_NETSPEED_DOWN], " ", rr, KBS);
 }
 
 
@@ -179,9 +200,10 @@ main (int argc, char *argv[])
     setup();
 
     while(1) {
-        char * ns = make_stat_item(IconNetSpeed, get_networkspeed());
+        char * ns = make_stat_item(ICON_NETSPEED, get_networkspeed());
+        char * ni = make_stat_item(ICON_NETWORK, get_networkinfo()); 
 
-        set_xroot(ns);
+        set_xroot(concat_string(2, ns, ni));
 
         sleep(cycletime);
     }
