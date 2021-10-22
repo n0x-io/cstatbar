@@ -5,8 +5,8 @@
  * 
  * Requires dwm to have the status2d patch applied and a font that supports icons e.g. Nerdfonts
  *
- * author: _N0x
- * version: 0.1
+ * @author: _N0x
+ * @version: 0.1
  */
 
 #include <stdio.h>
@@ -23,23 +23,25 @@ enum Icon { IconDateTime, IconBattery, IconCPU, IconRAM, IconDisk,
     IconNetSpeed, IconNetSpeedUp, IconNetSpeedDown, IconNetwork, IconMusic };
 
 /* function declaration */
-char *cs(int count, ...);
-char *getnetworkspeed();
-char *makestatitem(enum Icon icon, char *val);
-char *readinfile(char *filename);
-void setup();
-void setxroot(char *title);
+char *concat_string (int count, ...);
+char *get_networkspeed ();
+char *get_networkinfo ();
+char *make_stat_item (enum Icon icon, char *val);
+char *read_in_file (char *filename);
+void setup ();
+void set_xroot (char *title);
 
 /* variables */
-static const char *iface;
-static const char kbs[] = "kb/s";
-static unsigned int ic;
-static const char *icb;
-static const char *icf;
+static const char *g_if;
+static const char KBS[] = "kB/s";
+static unsigned int g_ic;
+static const char *g_icb;
+static const char *g_icf;
 
 
 /* a variadic function to take in count number of strings and concatenate them into one single string */
-char * cs(int count, ...)
+char 
+*concat_string (int count, ...)
 {
     va_list ap;
     va_start(ap, count);
@@ -61,49 +63,68 @@ char * cs(int count, ...)
 }
 
 
-/* get the rx and tx network speed from /sys/ */
-char * getnetworkspeed()
+/* Read in the IP from /proc/net/fib_trie for g_if */
+char 
+*get_networkinfo ()
 {
-    char *tmp,*R1,*R2,*T1,*T2;
-    char TT[12], RR[12];
+    return NULL;
+}
+
+
+/* get the rx and tx network speed from /sys/ */
+char 
+*get_networkspeed ()
+{
+    char *tmp;
+    char *r1;
+    char *r2;
+    char *t1;
+    char *t2;
+    char tt[12];
+    char rr[12];
     
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
-    R1 = readinfile(tmp);
+    tmp = concat_string(3, "/sys/class/net/", g_if, "/statistics/rx_bytes");
+    r1 = read_in_file(tmp);
     free(tmp);
     
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
-    T1 = readinfile(tmp);
+    tmp = concat_string(3, "/sys/class/net/", g_if, "/statistics/tx_bytes");
+    t1 = read_in_file(tmp);
     free(tmp);
     
     sleep(1);
 
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/rx_bytes");
-    R2 = readinfile(tmp);
+    tmp = concat_string(3, "/sys/class/net/", g_if, "/statistics/rx_bytes");
+    r2 = read_in_file(tmp);
     free(tmp);
     
-    tmp = cs(3, "/sys/class/net/", iface, "/statistics/tx_bytes");
-    T2 = readinfile(tmp);
+    tmp = concat_string(3, "/sys/class/net/", g_if, "/statistics/tx_bytes");
+    t2 = read_in_file(tmp);
     free(tmp);
 
-    sprintf(RR, "%d", (atoi(R2) - atoi(R1)) / 1024);
-    sprintf(TT, "%d", (atoi(T2) - atoi(T1)) / 1024);
+    sprintf(rr, "%d", (atoi(r2) - atoi(r1)) / 1024);
+    sprintf(tt, "%d", (atoi(t2) - atoi(t1)) / 1024);
 
-    return cs(9, 
-            icons[IconNetSpeedUp], " ", TT, kbs, " ", 
-            icons[IconNetSpeedDown], " ", RR, kbs);
+    return concat_string(9, 
+            icons[IconNetSpeedUp], " ", tt, KBS, " ", 
+            icons[IconNetSpeedDown], " ", rr, KBS);
 }
 
 
 /* creates a formatet string for a status item. Adds color if enabled */
-char * makestatitem(enum Icon icon, char *val){
-    return cs(4, " ", 
-            ic ? cs(7 ,"^b", icb, "^^c", icf, "^ ", icons[icon], " ^d^") : icons[icon],
-            "  ", val);
+char 
+*make_stat_item (enum Icon icon, char *val)
+{
+    return concat_string(4, " ", 
+            ((g_ic) 
+                ? concat_string(7 ,"^b", g_icb, "^^c", g_icf, "^ ", icons[icon], " ^d^") 
+                : icons[icon]
+            ), "  ", val);
 }
 
 
 /* Takes in a filename and returns the content of the file */
-char * readinfile(char *fileName)
+char 
+*read_in_file (char *fileName)
 {
     FILE * fd;
     char * c;
@@ -127,16 +148,18 @@ char * readinfile(char *fileName)
 
 
 /* basic setup method for internal variable etc */
-void setup(){
-    iface = interface;
-    ic = icon_color;
-    icb = icon_colorbg;
-    icf = icon_colorfg;
+void setup ()
+{
+    g_if = interface;
+    g_ic = icon_color;
+    g_icb = icon_colorbg;
+    g_icf = icon_colorfg;
 }
 
 
 /* Uses functionality from Xlib to set the window root name to a specified string */
-void setxroot(char *title)
+void 
+set_xroot (char *title)
 {
     Display * dpy = XOpenDisplay(NULL);
 
@@ -150,14 +173,15 @@ void setxroot(char *title)
 }
 
 
-int main(int argc, char *argv[])
+int 
+main (int argc, char *argv[])
 {
     setup();
 
     while(1) {
-        char * ns = makestatitem(IconNetSpeed, getnetworkspeed());
+        char * ns = make_stat_item(IconNetSpeed, get_networkspeed());
 
-        setxroot(ns);
+        set_xroot(ns);
 
         sleep(cycletime);
     }
