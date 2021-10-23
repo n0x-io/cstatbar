@@ -31,6 +31,11 @@ enum Icon { ICON_DATETIME, ICON_BATTERY, ICON_CPU, ICON_RAM, ICON_DISK,
 
 /* function declaration */
 char *concat_string (int count, ...);
+char *get_battery ();
+char *get_cpu_utilization ();
+char *get_datetime ();
+char *get_disk_utilization ();
+char *get_memory_utilization ();
 char *get_networkspeed ();
 char *get_networkinfo ();
 char *make_stat_item (enum Icon icon, char *val);
@@ -68,6 +73,53 @@ char
     }
     return result;
 }
+
+
+// @TODO
+/* The current battery percentage */
+char
+*get_battery ()
+{
+    return NULL;
+}
+
+
+// @TODO
+/* The current CPU utilization */
+char
+*get_cpu_utilization ()
+{
+    return NULL;
+}
+
+
+// @TODO
+/* The Datetime */
+char
+*get_datetime ()
+{
+    return NULL;
+}
+
+
+// @TODO
+/* The current Disk utilization 
+ * return root ("/") and home ("/home") utilization */
+char
+*get_disk_utilization ()
+{
+    return NULL;
+}
+
+
+// @TODO
+/* The current RAM utilization */
+char
+*get_memory_utilization ()
+{
+    return NULL;
+}
+
 
 // @TODO
 /* Read in the IP and display it 
